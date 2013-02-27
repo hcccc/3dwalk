@@ -161,24 +161,90 @@ function wallDistance(theta){
 }
 
 
+
+var Player = function (x, y, z, dir) {
+  this.posX = x;
+  this.posY = y;
+  this.posZ = z;
+  this.playerDir = dir;
+  this.playerVelY = 0; //Y velocity
+  this.theta = 0;
+};
+
+
+Player.prototype.drawMapBall = function() {
+  map.arc(this.posX*8, this.posY*8, 3, 0, 2*pi, true);
+  map.fill();
+}
+
+
+Player.prototype.update = function () {
+	var change=false;
+
+  if (key[0]) {
+		if (!key[1]) {
+			this.playerDir-=0.07; //left
+			change=true;
+		}
+	}
+	else if (key[1]) {
+		this.playerDir+=0.07; //right
+		change=true;
+	}
+
+	if (change) {
+		this.playerDir+=2*pi;
+		this.playerDir%=2*pi;
+		document.getElementById("sky").style.backgroundPosition=Math.floor(1-this.playerDir/(2*pi)*2400)+"px 0";
+	}
+
+	if (key[2] && !key[3]) {
+		if (this.playerVelY<0.1) this.playerVelY += 0.02;
+	}
+	else if (key[3] && !key[2]) {
+		if (this.playerVelY>-0.1) this.playerVelY -= 0.02;
+	}
+	else {
+		if (this.playerVelY<-0.02) this.playerVelY += 0.015;
+		else if (this.playerVelY>0.02) this.playerVelY -= 0.015;
+		else this.playerVelY=0;
+	}
+
+
+	if (this.playerVelY!=0) {
+
+		var oldX=this.posX;;
+		var oldY=this.posY;
+		var newX=oldX+Math.cos(this.playerDir)*this.playerVelY;
+		var newY=oldY+Math.sin(this.playerDir)*this.playerVelY;
+
+		if (!nearWall(newX, oldY)) {
+			this.posX=newX;
+			oldX=newX;
+			change=true;
+		}
+		if (!nearWall(oldX, newY)) {
+			this.posY=newY;
+			change=true;
+		}
+
+	}
+
+	//if (playerVelY) wobbleGun();
+	if (change) drawCanvas();
+}
+
+
+
+
 function drawCanvas(){
 
 	canvas.clearRect(0,0,400, 300);
 
-	var theta = playerDir-pi/6;
+	//var theta = playerDir-pi/6;
+  player1.theta = player1.playerDir-pi/6;
 
-	var wall=wallDistance(theta);
-
-
-  user.beginPath();
-  user.clearRect(0,0,80,80);
-  user.fillStyle="#ffe950";
-  user.arc(8*8, 8*8, 3, 0, 2*pi, true);
-  user.fill();
-  user.beginPath();;
-
-  console.log(playerPos[0]);
-  console.log(playerPos[1]);
+	var wall=wallDistance(player1.theta);
 
 	map.beginPath();
 	map.clearRect(0,0,80,80);
@@ -188,12 +254,14 @@ function drawCanvas(){
 	map.beginPath();
 	map.moveTo(8*playerPos[0], 8*playerPos[1]);
 
-
 	var linGrad;
 
 	var tl,tr,bl,br;
 
 	var theta1,theta2,fix1,fix2;
+
+
+  console.log(wall);
 
 	for (var i=0; i<wall.length; i+=4) {
 
@@ -234,7 +302,7 @@ function drawCanvas(){
 
 
 	}
-	map.fillStyle="#FF0000"
+	map.fillStyle="#FFFF00"
 	map.fill();
 
 }
@@ -386,6 +454,9 @@ window.onload=function(){
 	  alert('An error occured creating a Canvas 2D context. This may be because you are using an old browser, if not please contact me and I\'ll see if I can fix the error.');
 	  return;
 	}
+
+  var player1 = new Player(4, 4, 1, 0.4);
+
 	map=ele.getContext("2d");
   user=ele.getContext("2d");
 	canvas=document.getElementById("canvas").getContext("2d");
@@ -393,5 +464,5 @@ window.onload=function(){
 	document.getElementById("sky").style.backgroundPosition=Math.floor(-playerDir/(2*pi)*2400)+"px 0";
 	drawCanvas();
 	initUnderMap();
-	setInterval(update, 35);
+  setInterval(player1.update.bind(player1.this), 35);
 }
