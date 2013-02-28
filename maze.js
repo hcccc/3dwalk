@@ -49,7 +49,12 @@ var player_list=[];
 var key=[0,0,0,0,0]; // left, right, up, down
 var key2=[0,0,0,0,0];
 
-var arenaSize=77;
+var entranceX = 1.5;
+var entranceY = 0.5;
+var exitX = 0;
+var exitY = 0;
+
+var arenaSize=21;
 var map_scale=8;
 var map_size=640;
 var ball_size= map_scale*3/8;
@@ -153,6 +158,13 @@ function initArena(arenaWidth,arenaLength) {
             currY = currCell[1];
         }
     }
+
+    //entrance and exit
+    arena[1][0] = 0;
+    arena[arenaWidth-2][arenaLength-1] = 0;
+
+    exitX = arenaWidth - 1.5;
+    exitY = arenaLength - 0.5;
 
     return arena;
 }
@@ -371,7 +383,7 @@ Player.prototype.update = function () {
 	}
 
 
-	console.log(this.playerDir);
+	//console.log(this.playerDir);
 
 	//if (playerVelY) wobbleGun();
 	if (change) this.drawCanvas();
@@ -424,10 +436,15 @@ Player.prototype.update_simple = function () {
 
 	}
 
-	console.log(this.playerDir);
+	//console.log(this.playerDir);
+
+	console.log(this.posX, this.posY);
 
 	//if (playerVelY) wobbleGun();
-	if (change) drawMap();
+	if (change){
+		mazeCheck(this.posX, this.posY);
+		drawMap();
+	}
 };
 
 
@@ -495,11 +512,15 @@ Player.prototype.drawCanvas = function(){
 
 Player.prototype.nearWall = function(x,y){
 	var xx,yy;
+	var min_threshold = -0.4;
+	var threshold = 0.4;
+	var increment = 0.5;
+
 	if (isNaN(x)) x=this.posX;
 	if (isNaN(y)) y=this.posY;
-	for (var i=-0.1; i<=0.1; i+=0.2) {
+	for (var i=min_threshold; i<=threshold; i+=increment) {
 		xx=Math.floor(x+i)
-		for (var j=-0.1; j<=0.1; j+=0.2) {
+		for (var j=min_threshold; j<=threshold; j+=increment) {
 			yy=Math.floor(y+j);
 			if (arena[xx][yy]) return true;
 		}
@@ -552,6 +573,21 @@ document.onkeydown=function(e){changeKey((e||window.event).keyCode, 1);}
 document.onkeyup=function(e){changeKey((e||window.event).keyCode, 0);}
 
 
+function mazeCheck(x, y){
+	if (x < entranceX || y < entranceY) {
+		console.log(x, y);
+		alert("Not in the valid position");
+		location.reload();
+	}
+
+	if (x >= exitX && y >= exitY) {
+		alert("You cleared game!");
+		location.reload();
+	}
+}
+
+
+
 function drawMap(){
     map.beginPath();
 	map.clearRect(0,0,map_size,map_size);
@@ -559,7 +595,6 @@ function drawMap(){
 	map.beginPath();
 	map.moveTo(map_scale*this.posX, map_scale*this.posY);	
 }
-
 
 
 function initUnderMap(){
@@ -572,13 +607,21 @@ function initUnderMap(){
 			if (arena[i][j]) underMap.fillRect(i*map_scale, j*map_scale, map_scale, map_scale);
 		}
 	}
+
+/*
+	underMap.fillStyle="#0F0";
+	underMap.fillRect(1*map_scale, 0*map_scale, map_scale, map_scale);
+	underMap.fillStyle="#F00";
+	underMap.fillRect((arena.length-2)*map_scale, (arena.length-1)*map_scale, map_scale, map_scale);
+*/
 }
 
 
 window.onload=function(){
 
 	arena=initArena(arenaSize, arenaSize);
-	console.log(arena);
+	//console.log(arena);
+	//alert(JSON.stringify(arena));
 
 	var ele = document.getElementById("map");
 	if (!ele.getContext)
@@ -587,7 +630,10 @@ window.onload=function(){
 	  return;
 	}
 
-  	player1 = new Player(3.5, 3.5, 1, 0.4);
+	var InitX = 1.5;
+	var InitY = 0.5;
+
+  	player1 = new Player(InitX, InitY, 1, 0.0);
   	//player2 = new Player(3.5, 3.5, 1, 0.4);
 
 	map=ele.getContext("2d");
