@@ -36,6 +36,10 @@ Number.prototype.range=function(){
 Number.prototype.roundC=function(){
 	return Math.round(this*100)/100;
 }
+Number.prototype.isWhole=function(){
+	var i = Math.floor(this);
+	return (this-i == 0);
+}
 
 var total_tick=0;
 var map;
@@ -49,13 +53,13 @@ var player_list=[];
 var key=[0,0,0,0,0]; // left, right, up, down
 var key2=[0,0,0,0,0];
 
-var entranceX = 1.5;
-var entranceY = 0.5;
+var entranceX = 1.5 - 0.5;
+var entranceY = 0.5 - 0.5;
 var exitX = 0;
 var exitY = 0;
 
 var arenaSize=21;
-var map_scale=8;
+var map_scale=16;
 var map_size=640;
 var ball_size= map_scale*3/8;
 var path_width=200;
@@ -164,7 +168,7 @@ function initArena(arenaWidth,arenaLength) {
     arena[arenaWidth-2][arenaLength-1] = 0;
 
     exitX = arenaWidth - 1.5;
-    exitY = arenaLength - 0.5;
+    exitY = arenaLength;
 
     return arena;
 }
@@ -310,6 +314,9 @@ function wallDistance(theta){
 var Player = function (x, y, z, dir) {
 	this.posX = x;
 	this.posY = y;
+	this.oldX = x;
+	this.oldY = y;
+
 	this.posZ = z;
 	this.playerDir = dir;
 	this.playerVelY = 0; //Y velocity
@@ -392,61 +399,87 @@ Player.prototype.update = function () {
 
 Player.prototype.update_simple = function () {
 	var change=false;
+	var stepX = 0.5;
+	var stepY = 0.5;
+	var newX = this.posX;
+	var newY = this.posY;
+	var dir = 0; // W:1 E:2 N:3 S:4
 
 	if (key[0]) {
-		this.playerDir = 3.12;
-		change = true;
+		newX -= stepX;
+		dir = 1;
 	}
 	else if (key[1]) {
-		this.playerDir = 0.02;
-		change = true;
+		newX += stepX;
+		dir = 2;
 	}
 	else if (key[2]) {
-		this.playerDir = 4.70;
-		change = true;
+		newY -= stepY;
+		dir = 3;
 	}
 	else if (key[3]) {
-		this.playerDir = 1.57;
-		change = true;
+		newY += stepY;
+		dir = 4;
 	}
+
 
 	if (key[0] || key[1] || key[2] || key[3]) {
-		this.playerVelY = 0.2;
-	}
-	else {
-		this.playerVelY = 0;
-	}
+		
+		if(!this.nearWall_simple(newX, newY, dir)){
+			this.posX = newX;
+			this.posY = newY;
 
-	if (this.playerVelY!=0) {
-
-		var oldX=this.posX;;
-		var oldY=this.posY;
-		var newX=oldX+Math.cos(this.playerDir)*this.playerVelY;
-		var newY=oldY+Math.sin(this.playerDir)*this.playerVelY;
-
-		if (!this.nearWall(newX, oldY)) {
-			this.posX=newX;
-			oldX=newX;
-			change=true;
+	//		console.log(this.posX, this.posY);
+			mazeCheck(this.posX, this.posY);
+			drawMap();
 		}
-		if (!this.nearWall(oldX, newY)) {
-			this.posY=newY;
-			change=true;
-		}
-
-	}
-
-	//console.log(this.playerDir);
-
-	console.log(this.posX, this.posY);
-
-	//if (playerVelY) wobbleGun();
-	if (change){
-		mazeCheck(this.posX, this.posY);
-		drawMap();
 	}
 };
 
+
+Player.prototype.nearWall_simple = function(x,y,dir){
+
+	//if something wrong with given value
+	if (isNaN(x)) x=this.posX;
+	if (isNaN(y)) y=this.posY;
+
+	var xcord = 0;
+	var ycord = 0;
+	var xcord2 = 0;
+	var ycord2 = 0;
+	var offsetX = 0.5;
+	var offsetY = 0.5;
+
+
+	console.log("x, y: ", x, y);
+
+	if(x.isWhole()) {
+		xcord = Math.floor(x+offsetX);
+		xcord2 = Math.floor(x-offsetX);
+	}
+	else {
+		xcord = Math.floor(x);
+		xcord2 = xcord;
+	}
+
+	if (y.isWhole()) {
+		ycord = Math.floor(y+offsetY);
+		ycord2 = Math.floor(y-offsetY);
+	}
+	else {
+		ycord = Math.floor(y);
+		ycord2 = ycord;
+	}
+
+	console.log("xcord, xcord2, ycord, ycord2: ", xcord, xcord2, ycord, ycord2);
+
+	if (arena[xcord][ycord] || arena[xcord2][ycord2] || arena[xcord][ycord2] || arena[xcord2][ycord]) {// || arena[xcord][ycord2]){
+		return true;
+	}
+
+
+	return false;
+};
 
 
 
@@ -576,6 +609,7 @@ document.onkeyup=function(e){changeKey((e||window.event).keyCode, 0);}
 function mazeCheck(x, y){
 	if (x < entranceX || y < entranceY) {
 		console.log(x, y);
+		console.log("Position error");
 		alert("Not in the valid position");
 		location.reload();
 	}
@@ -630,7 +664,7 @@ window.onload=function(){
 	  return;
 	}
 
-	var InitX = 1.5;
+	var InitX = 1.5; 
 	var InitY = 0.5;
 
   	player1 = new Player(InitX, InitY, 1, 0.0);
@@ -646,5 +680,7 @@ window.onload=function(){
 	drawMap();
 	initUnderMap();
   	player1.run();
+
+
   	//setInterval(function() { player2.update2(); }, 35);
 }
